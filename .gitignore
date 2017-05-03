@@ -2,3 +2,5 @@
 *.dat
 *.o
 *.swp
+*.out
+*.log

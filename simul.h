@@ -16,7 +16,7 @@ struct State {
 };
 
 struct Observables {
-	std::vector<long long> moments1TP;  // Moments of X1
+	std::vector< std::vector<long long> > moments;  // All the moments
 };
 
 int runSimulations(const Parameters &p);

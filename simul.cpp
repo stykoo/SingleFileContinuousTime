@@ -78,7 +78,8 @@ void runMultipleSimulations(const Parameters &p, const long nbSimuls,
 void runOneSimulation(const Parameters &p, std::vector<Observables> &obs,
 					 std::mt19937 &rndGen) {
 	// To generate the time
-	double t = 0.;
+	double t = 0., tLast = 0.;
+	long tDiscrete = 0;
 	std::exponential_distribution<double> rndTime((double) p.nbParticles);
 
 	// Initialize obs
@@ -89,18 +90,25 @@ void runOneSimulation(const Parameters &p, std::vector<Observables> &obs,
 	initState(state, p, rndGen);
 
 	// Compute the initial observables
-	computeObservables(state, p, obs[0]);
+	computeObservables(state, p, obs[tDiscrete]);
+	++tDiscrete;
 
 	if (p.visu) {
-		visualize(state, p, 0);
+		visualize(state, p, 0.);
 	}
 
 	// Loop over time
-	for (int i = 0 ; i < p.nbIters ; ++i) {
+//	while (t < p.duration) {
+	while (tDiscrete < p.nbSteps) {
 		// Evolve
 		updateState(state, p, rndGen);
-		computeObservables(state, p, obs[i+1]);
 		t += rndTime(rndGen);
+
+		while (t - tLast > p.dt) {
+			computeObservables(state, p, obs[tDiscrete]);
+			++tDiscrete;
+			tLast += p.dt;
+		}
 		if (p.visu) {
 			visualize(state, p, t);
 		}
@@ -112,16 +120,30 @@ void initState(State &state, const Parameters &p, std::mt19937 &rndGen) {
 	state.positions.resize(p.nbParticles);
 	state.occupations.assign(p.nbSites, -1);
 
-	// Generate a random permutation of the sites
-	// and assign the first sites to the particles.
-	std::vector<long> seq(p.nbSites);
-	for (long i = 0 ; i < p.nbSites ; ++i) {
-		seq[i] = i;
+	// Assign the sites of the tracers
+	for (long i = 0 ; i < p.nbTracers ; ++i) {
+		state.positions[i] = p.initPos[i];
+		state.occupations[p.initPos[i]] = i;
 	}
+
+	// Generate a random permutation of the remaining sites
+	// and assign the first sites to the particles.
+	std::vector<long> seq(p.nbSites - p.nbTracers);
+	long i = 0, j = 0;
+	for (long k = 0 ; k < p.nbTracers ; ++k) {
+		while (i < p.initPos[k]) {
+			seq[j++] = i++;
+		}
+		++i;
+	}
+	while (i < p.nbSites) {
+		seq[j++] = i++;
+	}
+
 	std::shuffle(seq.begin(), seq.end(), rndGen);
-	for (long i=0 ; i < p.nbParticles ; ++i) {
-		state.positions[i] = seq[i];
-		state.occupations[seq[i]] = i;
+	for (long i=p.nbTracers ; i < p.nbParticles ; ++i) {
+		state.positions[i] = seq[i - p.nbTracers];
+		state.occupations[seq[i - p.nbTracers]] = i;
 	}
 
 	// Alternative algorithm at high density
@@ -162,7 +184,10 @@ void updateState(State &state, const Parameters &p, std::mt19937 &rndGen) {
 	long pos = state.positions[part]; 
 	double u = distReal(rndGen);
 
-	if (u < DEFAULT_PROBA_RIGHT) {
+	// Probability to jump to the right
+	double pr = (part < p.nbTracers) ? p.probas[part] : DEFAULT_PROBA_RIGHT;
+
+	if (u < pr) {
 		long posR = periodicAdd1(pos, p.nbSites);
 		if(state.occupations[posR] == -1){
 			state.occupations[pos] = -1;
@@ -181,18 +206,29 @@ void updateState(State &state, const Parameters &p, std::mt19937 &rndGen) {
 
 // Initialize a vector of observables
 void initObservables(std::vector<Observables> &obs, const Parameters &p) {
-	obs.resize(p.nbIters + 1);
-	for (int t = 0 ; t <= p.nbIters ; ++t) {
-		obs[t].moments1TP.assign(p.nbMoments, 0);
+	obs.resize(p.nbSteps);
+	for (long t = 0 ; t < p.nbSteps ; ++t) {
+		obs[t].moments.resize(p.nbTracers);
+		for (long i = 0 ; i < p.nbTracers ; ++i) {
+			obs[t].moments[i].assign(p.nbTracers - i, 0);
+		}
 	}
 }
 
 // Compute the observables.
 void computeObservables(const State &state, const Parameters &p,
 		                Observables &o) {
-	long x1per = periodicBCsym(state.positions[0], p.nbSites);
-	for (int i = 0 ; i < p.nbMoments ; ++i) {
-		o.moments1TP[i] = mypow(x1per, i + 1);
+	std::vector<long> xsPer(p.nbTracers);
+	for (long i = 0 ; i < p.nbTracers ; ++i) {
+		xsPer[i] = periodicBCsym(state.positions[i] - p.initPos[i], p.nbSites);
+	}
+	for (long i = 0 ; i < p.nbTracers ; ++i) {
+		for (long j = 0 ; j < p.nbTracers - i ; ++j) {
+			o.moments[i][j] = 1;
+			for (long k = j ; k < j + i + 1 ; ++k) {
+				o.moments[i][j] *= xsPer[k];
+			}
+		}
 	}
 }
 
@@ -200,9 +236,11 @@ void computeObservables(const State &state, const Parameters &p,
 void addObservables(std::vector<Observables> &obs1,
 		            const std::vector<Observables> &obs2, const Parameters &p)
 {
-	for (long t = 0 ; t <= p.nbIters ; ++t) {
-		for (int i = 0 ; i < p.nbMoments ; ++i) {
-			obs1[t].moments1TP[i] += obs2[t].moments1TP[i];
+	for (long t = 0 ; t < p.nbSteps ; ++t) {
+		for (long i = 0 ; i < p.nbTracers ; ++i) {
+			for (long j = 0 ; j < p.nbTracers - i ; ++j) {
+				obs1[t].moments[i][j] += obs2[t].moments[i][j];
+			}
 		}
 	}
 }
@@ -216,21 +254,29 @@ int exportObservables(const std::vector<Observables> &sumObs,
 	}
 
 	// Header
-	file << "# SingleFile2TP (" << __DATE__ <<  ", " << __TIME__ << "): ";
+	file << "# SingleFileContinuousTime (" << __DATE__ <<  ", " << __TIME__
+		<< "): ";
 	printParameters(p, file);
 	file << "\n# t";
-	for (int i = 0 ; i < p.nbMoments ; ++i) {
-		file << " x1^" << i + 1;
+	for (long i = 0 ; i < p.nbTracers ; ++i) {
+		for (long j = 0 ; j < p.nbTracers - i ; ++j) {
+			file << " ";
+			for (long k = j ; k < j + i + 1 ; ++k) {
+				file << "x" << k+1;
+			}
+		}
 	}
 	file << "\n";
 
 	file << std::scientific << std::setprecision(DEFAULT_OUTPUT_PRECISION);
 
 	// Data (we write the average and not the sum)
-	for (long t = 0 ; t <= p.nbIters ; ++t) {
-		file << t;
-		for (int i = 0 ; i < p.nbMoments ; ++i) {
-			file << " " << ((double) sumObs[t].moments1TP[i]) / p.nbSimuls;
+	for (long k = 0 ; k < p.nbSteps ; ++k) {
+		file << k * p.dt;
+		for (long i = 0 ; i < p.nbTracers ; ++i) {
+			for (long j = 0 ; j < p.nbTracers - i ; ++j) {
+				file << " " << ((double) sumObs[k].moments[i][j]) / p.nbSimuls;
+			}
 		}
 		file << "\n";
 	}

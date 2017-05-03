@@ -13,8 +13,10 @@ int parseArguments(int argc, char **argv, Parameters &p) {
 		("sites,n", po::value<long>(&p.nbSites)->required(), "Number of sites")
 		("particles,m", po::value<long>(&p.nbParticles)->required(),
 		 "Number of particles")
-		("iters,i", po::value<long>(&p.nbIters)->required(),
-		 "Number of time iterations")
+		("duration,T", po::value<double>(&p.duration)->required(),
+		 "Duration of the simulation")
+		("dt,t", po::value<double>(&p.dt)->required(),
+		 "Timestep for export")
 		("simuls,s", po::value<long>(&p.nbSimuls)->required(),
 		 "Number of repetitions of the simulation")
 		("initPos,d",
@@ -25,7 +27,7 @@ int parseArguments(int argc, char **argv, Parameters &p) {
 		 "Probabilities to jump to the right.")
 		("moments,M", po::value<int>(&p.nbMoments)->default_value(
 			DEFAULT_NB_MOMENTS), "Number of moments to compute")
-		("threads,t", po::value<int>(&p.nbThreads)->default_value(
+		("threads,c", po::value<int>(&p.nbThreads)->default_value(
 			DEFAULT_THREADS), "Number of threads")
 		("output,o", po::value<std::string>(&p.output)->default_value(
 			DEFAULT_OUTPUT_FILE), "Output file")
@@ -50,13 +52,15 @@ int parseArguments(int argc, char **argv, Parameters &p) {
         }
 
         po::notify(vars);
+
+		// The number of tracers is given by the number of positions
+		p.nbTracers = (long) p.initPos.size();
+		// Number of timesteps
+		p.nbSteps = (long) (p.duration / p.dt);
 	} catch (std::exception &e) {
 		std::cerr << "Error: " << e.what() << std::endl;
 		return 2;
 	}
-
-	// The number of tracers is given by the number of positions
-	p.nbTracers = (long) p.initPos.size();
 
 	return 0;
 }

@@ -12,8 +12,13 @@ int checkParameters(const Parameters &p) {
 			<< std::endl;
 		return 1;
 	}
-	if (p.nbIters <= 0) {
-		std::cerr << "Error: nbIters should be strictly positive."
+	if (p.duration <= 0.) {
+		std::cerr << "Error: duration should be strictly positive."
+			<< std::endl;
+		return 1;
+	}
+	if (p.dt <= 0.) {
+		std::cerr << "Error: dt should be strictly positive."
 			<< std::endl;
 		return 1;
 	}
@@ -77,7 +82,7 @@ int checkParameters(const Parameters &p) {
 // Print the parameters to stream.
 void printParameters(const Parameters &p, std::ostream &stream) {
 	stream << "sites=" << p.nbSites << ", particles=" << p.nbParticles
-		<< ", tracers=" << p.nbTracers << ", iters=" << p.nbIters
+		<< ", tracers=" << p.nbTracers << ", duration=" << p.duration
 		<< ", simuls=" << p.nbSimuls << ", moments=" << p.nbMoments;
 	stream << ", initPos=";
 	for (auto po : p.initPos) {

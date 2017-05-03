@@ -10,6 +10,7 @@
 
 #include <iostream>
 #include <string>
+#include <vector>
 
 struct Parameters {
 	long nbSites;  // Number of sites
@@ -19,6 +20,10 @@ struct Parameters {
 	int nbMoments;  // Number of moments to compute
 	int nbThreads;  // Number of threads
 	std::string output;
+
+	long nbTracers;  // Number of tracers
+	std::vector<double> probas;  // Probabilities to jump to the right
+	std::vector<long> dists;  // Distances between tracers
 	
 	bool alt;  // Use alternative algorithm for high density
 	bool visu;  // Visualization

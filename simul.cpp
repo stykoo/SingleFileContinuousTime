@@ -243,7 +243,10 @@ int exportObservables(const std::vector<Observables> &sumObs,
 void visualize(const State &state, const Parameters &p, const double t) {
 	std::map<long,char> mymap;
 	std::map<long,char>::iterator it;
-	for (long i = 0 ; i < p.nbParticles ; ++i) {
+	for (long i = 0 ; i < p.nbTracers ; ++i) {
+		mymap[state.positions[i]] = 'X';
+	}
+	for (long i = p.nbTracers ; i < p.nbParticles ; ++i) {
 		mymap[state.positions[i]] = 'O';
 	}
 

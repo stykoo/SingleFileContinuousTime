@@ -32,14 +32,28 @@ int checkParameters(const Parameters &p) {
 			<< " the number of particles." << std::endl;
 		return 1;
 	}
-	if ((long) p.probas.size() != p.nbTracers) {
-		std::cerr << "Critical error: the size of the vector of probabilies"
+	if ((long) p.initPos.size() != p.nbTracers) {
+		std::cerr << "Critical error: the size of the vector of positions"
 			<< " is wrong." << std::endl;
 		return 1;
 	}
-	if ((long) p.dists.size() != p.nbTracers - 1) {
-		std::cerr << "Error: the number of distances should be the number"
-			<< " of tracers minus one." << std::endl;
+	for (auto po : p.initPos) {
+		if (po < 0 || po >= p.nbSites) {
+			std::cerr << "Error: the positions should in the right range."
+				<< std::endl;
+			return 1;
+		}
+	}
+	for (long i = 0 ; i < p.nbTracers - 1 ; ++i) {
+		if (p.initPos[i] >= p.initPos[i+1]) {
+			std::cerr << "Error: please sort the positions."
+				<< std::endl;
+			return 1;
+		}
+	}
+	if ((long) p.probas.size() != p.nbTracers) {
+		std::cerr << "Error: the number of probabilities and the number"
+			<< " of tracers should be equal." << std::endl;
 		return 1;
 	}
 	for (auto pr : p.probas) {
@@ -49,20 +63,7 @@ int checkParameters(const Parameters &p) {
 			return 1;
 		}
 	}
-	long sumL = 0;
-	for (auto d : p.dists) {
-		if (d <= 0) {
-			std::cerr << "Error: The distances should be strictly positive."
-				<< std::endl;
-			return 1;
-		}
-		sumL += d;
-	}
-	if (sumL >= p.nbSites) {
-		std::cerr << "Error: The sum of the distances should be inferior to"
-			<< " the size of the system." << std::endl;
-		return 1;
-	}
+
 	if (p.alt && 2 * p.nbParticles <= p.nbSites) {
 		std::cerr << "Warning: You shouldn't use the alternative algorithm "
 			<< " at such a low density." << std::endl;
@@ -78,15 +79,13 @@ void printParameters(const Parameters &p, std::ostream &stream) {
 	stream << "sites=" << p.nbSites << ", particles=" << p.nbParticles
 		<< ", tracers=" << p.nbTracers << ", iters=" << p.nbIters
 		<< ", simuls=" << p.nbSimuls << ", moments=" << p.nbMoments;
+	stream << ", initPos=";
+	for (auto po : p.initPos) {
+		stream << po << ":";
+	}
 	stream << ", probas=";
 	for (auto pr : p.probas) {
 		stream << pr << ":";
-	}
-	if (p.nbTracers > 1) {
-		stream << ", dists=";
-		for (auto d : p.dists) {
-			stream << d << ":";
-		}
 	}
 }
 

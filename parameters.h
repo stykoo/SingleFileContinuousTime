@@ -22,8 +22,8 @@ struct Parameters {
 	std::string output;
 
 	long nbTracers;  // Number of tracers
+	std::vector<long> initPos;  // Initial positions of the tracers
 	std::vector<double> probas;  // Probabilities to jump to the right
-	std::vector<long> dists;  // Distances between tracers
 	
 	bool alt;  // Use alternative algorithm for high density
 	bool visu;  // Visualization

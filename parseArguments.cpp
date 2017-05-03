@@ -17,12 +17,12 @@ int parseArguments(int argc, char **argv, Parameters &p) {
 		 "Number of time iterations")
 		("simuls,s", po::value<long>(&p.nbSimuls)->required(),
 		 "Number of repetitions of the simulation")
+		("initPos,d",
+		 po::value< std::vector<long> >(&p.initPos)->multitoken()->required(),
+		 "Initial positions of the tracers. It fixes the number of tracers.")
 		("probas,p",
 		 po::value< std::vector<double> >(&p.probas)->multitoken()->required(),
-		 "Probabilities to jump to the right. It fixes the number of tracers")
-		("dists,d",
-		 po::value< std::vector<long> >(&p.dists)->multitoken()->zero_tokens(),
-		 "Distances between the tracers")
+		 "Probabilities to jump to the right.")
 		("moments,M", po::value<int>(&p.nbMoments)->default_value(
 			DEFAULT_NB_MOMENTS), "Number of moments to compute")
 		("threads,t", po::value<int>(&p.nbThreads)->default_value(
@@ -55,8 +55,8 @@ int parseArguments(int argc, char **argv, Parameters &p) {
 		return 2;
 	}
 
-	// The number of tracers is given by the number of probabilities
-	p.nbTracers = (long) p.probas.size();
+	// The number of tracers is given by the number of positions
+	p.nbTracers = (long) p.initPos.size();
 
 	return 0;
 }

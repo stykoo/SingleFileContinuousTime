@@ -58,7 +58,8 @@ void runMultipleSimulations(const Parameters &p, const long nbSimuls,
 
 	for (long s = 0 ; s < nbSimuls ; ++s) {
 		if (p.verbose || p.visu) {
-			std::cout << "Simulation " << s + 1 << std::endl;
+			std::cout << "Simulation " << s + 1 
+				<< " on thread " << std::this_thread::get_id() << std::endl;
 		}
 
 		// Run a single simulation

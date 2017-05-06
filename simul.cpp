@@ -9,36 +9,40 @@
 // Run all the simulations and store the moments.
 int runSimulations(const Parameters &p) {
 	std::random_device rd;
-	std::vector<std::thread> threads;
-	std::vector< std::vector<Observables> > allSumsObs(p.nbThreads);
+    long nbSimulsPerThread = p.nbSimuls / p.nbThreads;
 
-	long nbSimulsPerThread = p.nbSimuls / p.nbThreads;
-	
 	if (p.nbSimuls % p.nbThreads != 0) {
 		std::cerr << "Warning: nbSimuls is not a multiple of nbThreads."
 			<< nbSimulsPerThread * p.nbThreads << " simulations will be done."
 			<< std::endl;
 	}
 
-	// Threads
-	for (int i = 0 ; i < p.nbThreads ; ++i) {
-		threads.push_back(std::thread(runMultipleSimulations, p,
-	        nbSimulsPerThread, std::ref(allSumsObs[i]), rd())); 
-	}
-	
-	// Wait for everyone
-	for (auto &th : threads) {
-		th.join();
-	}
-
 	// Initialize the total sum
 	std::vector<Observables> sumObs;
 	initObservables(sumObs, p);
 
-	// Add the observables to the total sum
-	for (int k = 0 ; k < p.nbThreads ; ++k) {
-		addObservables(sumObs, allSumsObs[k], p);
-	}
+    if (p.nbThreads > 1) {
+        std::vector<std::thread> threads;
+        std::vector< std::vector<Observables> > allSumsObs(p.nbThreads);
+
+        // Threads
+        for (int i = 0 ; i < p.nbThreads ; ++i) {
+            threads.push_back(std::thread(runMultipleSimulations, p,
+                nbSimulsPerThread, std::ref(allSumsObs[i]), rd())); 
+        }
+        
+        // Wait for everyone
+        for (auto &th : threads) {
+            th.join();
+        }
+
+        // Add the observables to the total sum
+        for (int k = 0 ; k < p.nbThreads ; ++k) {
+            addObservables(sumObs, allSumsObs[k], p);
+        }
+    } else {
+        runMultipleSimulations(p, p.nbSimuls, sumObs, rd());
+    }
 
 	int status = exportObservables(sumObs, p);
 

@@ -55,7 +55,7 @@ void runMultipleSimulations(const Parameters &p, const long nbSimuls,
 		                   std::vector<Observables> &sumObs,
 						   const unsigned int seed) {
     // Random generator
-	std::mt19937 rndGen(seed);
+	MyRng rndGen(seed);
 
 	// Initialize sumObs
 	initObservables(sumObs, p);
@@ -81,7 +81,7 @@ void runMultipleSimulations(const Parameters &p, const long nbSimuls,
 
 // Run a single simulation and compute the moments.
 void runOneSimulation(const Parameters &p, std::vector<Observables> &obs,
-					 std::mt19937 &rndGen) {
+					 MyRng &rndGen) {
 	// To generate the time
 	double t = 0., tLast = 0.;
 	long tDiscrete = 0;
@@ -110,8 +110,7 @@ void runOneSimulation(const Parameters &p, std::vector<Observables> &obs,
 		t += rndTime(rndGen);
 
 		while (t - tLast > p.dt) {
-			computeObservables(state, p, obs[tDiscrete]);
-			++tDiscrete;
+			computeObservables(state, p, obs[tDiscrete++]);
 			tLast += p.dt;
 		}
 		if (p.visu) {
@@ -121,14 +120,14 @@ void runOneSimulation(const Parameters &p, std::vector<Observables> &obs,
 }
 
 // Generate an initial state.
-void initState(State &state, const Parameters &p, std::mt19937 &rndGen) {
+void initState(State &state, const Parameters &p, MyRng &rndGen) {
 	state.positions.resize(p.nbParticles);
-	state.occupations.assign(p.nbSites, -1);
+	state.occupations.assign(p.nbSites, false);
 
 	// Assign the sites of the tracers
 	for (long i = 0 ; i < p.nbTracers ; ++i) {
 		state.positions[i] = p.initPos[i];
-		state.occupations[p.initPos[i]] = i;
+		state.occupations[p.initPos[i]] = true;
 	}
 
 	// Generate a random permutation of the remaining sites
@@ -148,40 +147,12 @@ void initState(State &state, const Parameters &p, std::mt19937 &rndGen) {
 	std::shuffle(seq.begin(), seq.end(), rndGen);
 	for (long i=p.nbTracers ; i < p.nbParticles ; ++i) {
 		state.positions[i] = seq[i - p.nbTracers];
-		state.occupations[seq[i - p.nbTracers]] = i;
-	}
-
-	// Alternative algorithm at high density
-	if (p.alt) {
-		// There are at most twice as many free particles as vacancies
-		state.freeParticles.assign(2 * (p.nbSites - p.nbParticles), -1);
-		state.freeOnLeft.assign(p.nbParticles, false);
-		state.freeOnRight.assign(p.nbParticles, false);
-
-		long k = 0;
-		// Check which particles are free on left / right
-		for (long i=0 ; i < p.nbParticles ; ++i) {
-			long pos = periodicSubs1(state.positions[i], p.nbSites);
-			if(state.occupations[pos] == -1){
-				state.freeOnLeft[i] = true;
-			}
-			pos = periodicAdd1(state.positions[i], p.nbSites);
-			if(state.occupations[pos] == -1){
-				state.freeOnRight[i] = true;
-			}
-
-			// Add the particle to the 'list' of free particles
-			if(state.freeOnLeft[i] || state.freeOnRight[i]) {
-				state.freeParticles[k] = i;
-				++k;
-			}
-		}
-		state.nbFreeParticles = k;
+		state.occupations[seq[i - p.nbTracers]] = true;
 	}
 }
 
 // Implement one step of the time evolution of the system.
-void updateState(State &state, const Parameters &p, std::mt19937 &rndGen) {
+void updateState(State &state, const Parameters &p, MyRng &rndGen) {
 	std::uniform_int_distribution<long> distInt(0, p.nbParticles - 1);
 	std::uniform_real_distribution<double> distReal(0.0, 1.0);
 
@@ -194,16 +165,16 @@ void updateState(State &state, const Parameters &p, std::mt19937 &rndGen) {
 
 	if (u < pr) {
 		long posR = periodicAdd1(pos, p.nbSites);
-		if(state.occupations[posR] == -1){
-			state.occupations[pos] = -1;
-			state.occupations[posR] = part;
+		if(!state.occupations[posR]){
+			state.occupations[pos] = false;
+			state.occupations[posR] = true;
 			state.positions[part] = posR;
 		}
 	} else {
 		long posL = periodicSubs1(pos, p.nbSites);
-		if(state.occupations[posL] == -1){
-			state.occupations[pos] = -1;
-			state.occupations[posL] = part;
+		if(!state.occupations[posL]){
+			state.occupations[pos] = false;
+			state.occupations[posL] = true;
 			state.positions[part] = posL;
 		}
 	}

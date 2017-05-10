@@ -5,14 +5,12 @@
 #include <random>
 #include "parameters.h"
 
+//typedef std::minstd_rand MyRng;
+typedef std::mt19937 MyRng;
+
 struct State {
 	std::vector<long> positions;  // Positions of the particles
-	std::vector<long> occupations;  // Occupations of the sites
-
-	std::vector<long> freeParticles;  // Particles that are free to move
-	std::vector<bool> freeOnLeft;  // Is particle free to move to the left?
-	std::vector<bool> freeOnRight;  // Is particle free to move to the right?
-	long nbFreeParticles;
+	std::vector<bool> occupations;  // Occupations of the sites
 };
 
 struct Observables {
@@ -24,9 +22,9 @@ void runMultipleSimulations(const Parameters &p, const long nbSimuls,
 		                   std::vector<Observables> &sumObs,
 						   const unsigned int seed);
 void runOneSimulation(const Parameters &p, std::vector<Observables> &obs,
-   					  std::mt19937 &rndGen);
-void initState(State &state, const Parameters &p, std::mt19937 &rndGen);
-void updateState(State &state, const Parameters &p, std::mt19937 &rndGen);
+   					  MyRng &rndGen);
+void initState(State &state, const Parameters &p, MyRng &rndGen);
+void updateState(State &state, const Parameters &p, MyRng &rndGen);
 void initObservables(std::vector<Observables> &obs, const Parameters &p);
 void computeObservables(const State &state, const Parameters &p,
 		                Observables &o);

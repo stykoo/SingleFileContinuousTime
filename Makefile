@@ -7,7 +7,7 @@ all: $(EXEC)
 
 prof: CFLAGS += -pg
 prof: LDFLAGS += -pg
-prof: singleFileContinuousTime
+prof: singleFileContinuousTime 
 
 singleFileContinuousTime: main.o simul.o parseArguments.o parameters.o
 		$(CC) -o $@ $^ $(LDFLAGS)

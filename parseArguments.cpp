@@ -33,6 +33,8 @@ int parseArguments(int argc, char **argv, Parameters &p) {
 			DEFAULT_OUTPUT_FILE), "Output file")
         ("alt,A", po::bool_switch(&p.alt),
 		 "Use alternative algorithm for high density")
+        ("occ,O", po::bool_switch(&p.computeOcc),
+		 "Compute and export occupations")
         ("visu,V", po::bool_switch(&p.visu), "Visualisation")
         ("sleep", po::value<int>(&p.sleep)->default_value(DEFAULT_VISU_SLEEP),
 		 "Number of ms between visualizations")

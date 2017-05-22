@@ -213,6 +213,11 @@ void initObservables(std::vector<Observables> &obs, const Parameters &p) {
 		for (long i = 0 ; i < p.nbTracers ; ++i) {
 			obs[t].moments[i].assign(p.nbTracers - i, 0);
 		}
+		
+		if (p.computeOcc) {
+			obs[t].occupations.assign(p.nbSites, 0);
+			obs[t].occCorrel.assign(p.nbSites, 0);
+		}
 	}
 }
 
@@ -231,6 +236,16 @@ void computeObservables(const State &state, const Parameters &p,
 			}
 		}
 	}
+
+	if (p.computeOcc) {
+		for (long i = 0 ; i < p.nbSites ; ++i) {
+			long k = periodicBC(state.positions[0] + i, p.nbSites);
+			long l = periodicAdd1(state.positions[0], p.nbSites);
+			o.occupations[i] = (long) (state.occupations[k] >= 0);
+			o.occCorrel[i] = (long)
+				((state.occupations[k] >= 0) && (state.occupations[l] >= 0));
+		}
+	}
 }
 
 // Add observables o2 to observables o1.
@@ -241,6 +256,13 @@ void addObservables(std::vector<Observables> &obs1,
 		for (long i = 0 ; i < p.nbTracers ; ++i) {
 			for (long j = 0 ; j < p.nbTracers - i ; ++j) {
 				obs1[t].moments[i][j] += obs2[t].moments[i][j];
+			}
+		}
+
+		if (p.computeOcc) {
+			for (long i = 0 ; i < p.nbSites ; ++i) {
+				obs1[t].occupations[i] += obs2[t].occupations[i];
+				obs1[t].occCorrel[i] += obs2[t].occCorrel[i];
 			}
 		}
 	}
@@ -283,6 +305,36 @@ int exportObservables(const std::vector<Observables> &sumObs,
 	}
 
 	file.close();
+
+	// Export occupations if needed
+	if (p.computeOcc) {
+		size_t pos = p.output.find_last_of(".");
+		std::string rawname = p.output.substr(0, pos); 
+		std::string ext = p.output.substr(pos); 
+		std::string name = rawname + "_occ_" + std::to_string(p.duration)
+			               + ext;
+
+		file.open(name);
+		if (!file.is_open()) {
+			return 1;
+		}
+
+		file << "# SingleFileContinuousTime (" << __DATE__ <<  ", " << __TIME__
+		 	<< "): ";
+		printParameters(p, file);
+		file << ", t=" + std::to_string(p.duration)
+			+ "\n# i eta_i eta_i*eta_1\n";
+
+		for (long j = 0 ; j < p.nbSites ; ++j) {
+			file << j << " "
+				<< ((double) sumObs[p.nbSteps-1].occupations[j]) / p.nbSimuls
+				<< " "
+				<< ((double) sumObs[p.nbSteps-1].occCorrel[j]) / p.nbSimuls
+				<< "\n";
+		}
+
+		file.close();
+	}
 	return 0;
 }
 

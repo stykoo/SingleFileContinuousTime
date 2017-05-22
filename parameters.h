@@ -30,6 +30,7 @@ struct Parameters {
 	std::vector<double> probas;  // Probabilities to jump to the right
 	
 	bool alt;  // Use alternative algorithm for high density
+	bool computeOcc;  // Compute occupations
 	bool visu;  // Visualization
 	int sleep;  // Number of milliseconds between two visualizations
 	bool verbose;  // Verbose mode

@@ -17,6 +17,9 @@ struct State {
 
 struct Observables {
 	std::vector< std::vector<long long> > moments;  // All the moments
+	std::vector<long> occupations;  // Occupations wrt the first TP
+	// Occupations wrt the first TP times occupation right of the first tracer
+	std::vector<long> occCorrel;
 };
 
 int runSimulations(const Parameters &p);

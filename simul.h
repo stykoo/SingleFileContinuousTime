@@ -5,6 +5,8 @@
 #include <random>
 #include "parameters.h"
 
+#define NB_OBS_OCCUPATIONS 4
+
 struct State {
 	std::vector<long> positions;  // Positions of the particles
 	std::vector<long> occupations;  // Occupations of the sites
@@ -17,9 +19,13 @@ struct State {
 
 struct Observables {
 	std::vector< std::vector<long long> > moments;  // All the moments
-	std::vector<long> occupations;  // Occupations wrt the first TP
-	// Occupations wrt the first TP times occupation right of the first tracer
-	std::vector<long> occCorrel;
+
+	// Observables related to the occupations
+	// 0 -> occupations (eta_l)
+	// 1 -> occupation * occupation of site X+1 (eta_l * eta_1)
+	// 2 -> X * eta_l
+	// 3 -> X * eta_l * eta_1 
+	std::vector< std::vector<long> > occObs;
 };
 
 int runSimulations(const Parameters &p);

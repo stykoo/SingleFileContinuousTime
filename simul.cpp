@@ -215,8 +215,10 @@ void initObservables(std::vector<Observables> &obs, const Parameters &p) {
 		}
 		
 		if (p.computeOcc) {
-			obs[t].occupations.assign(p.nbSites, 0);
-			obs[t].occCorrel.assign(p.nbSites, 0);
+			obs[t].occObs.resize(NB_OBS_OCCUPATIONS);
+			for (int i = 0 ; i < NB_OBS_OCCUPATIONS ; ++i) {
+				obs[t].occObs[i].assign(p.nbSites, 0);
+			}
 		}
 	}
 }
@@ -241,9 +243,13 @@ void computeObservables(const State &state, const Parameters &p,
 		for (long i = 0 ; i < p.nbSites ; ++i) {
 			long k = periodicBC(state.positions[0] + i, p.nbSites);
 			long l = periodicAdd1(state.positions[0], p.nbSites);
-			o.occupations[i] = (long) (state.occupations[k] >= 0);
-			o.occCorrel[i] = (long)
-				((state.occupations[k] >= 0) && (state.occupations[l] >= 0));
+			long eta = (long) (state.occupations[k] >= 0);
+			long eta1 = (long) (state.occupations[l] >= 0);
+
+			o.occObs[0][i] = eta;
+			o.occObs[1][i] = eta * eta1;
+			o.occObs[2][i] = xsPer[0] * eta;
+			o.occObs[3][i] = xsPer[0] * eta * eta1;
 		}
 	}
 }
@@ -261,8 +267,9 @@ void addObservables(std::vector<Observables> &obs1,
 
 		if (p.computeOcc) {
 			for (long i = 0 ; i < p.nbSites ; ++i) {
-				obs1[t].occupations[i] += obs2[t].occupations[i];
-				obs1[t].occCorrel[i] += obs2[t].occCorrel[i];
+				for (int j = 0 ; j < NB_OBS_OCCUPATIONS ; ++j) {
+					obs1[t].occObs[j][i] += obs2[t].occObs[j][i];
+				}
 			}
 		}
 	}
@@ -320,17 +327,21 @@ int exportObservables(const std::vector<Observables> &sumObs,
 		}
 
 		file << "# SingleFileContinuousTime (" << __DATE__ <<  ", " << __TIME__
-		 	<< "): ";
+		   	<< "): ";
 		printParameters(p, file);
-		file << ", t=" + std::to_string(p.duration)
-			+ "\n# i eta_i eta_i*eta_1\n";
+		file << ", t=" + std::to_string(p.duration) << "\n";
+		file << "# i eta_i eta_i*eta_1 X*eta_i X*eta_i*eta_1 X\n";
+
+		double xfin = ((double) sumObs[p.nbSteps-1].moments[0][0])
+			          / p.nbSimuls;
 
 		for (long j = 0 ; j < p.nbSites ; ++j) {
-			file << j << " "
-				<< ((double) sumObs[p.nbSteps-1].occupations[j]) / p.nbSimuls
-				<< " "
-				<< ((double) sumObs[p.nbSteps-1].occCorrel[j]) / p.nbSimuls
-				<< "\n";
+			file << j;
+			for (int k = 0 ; k < NB_OBS_OCCUPATIONS ; ++k) {
+		   		file << " " << (((double) sumObs[p.nbSteps-1].occObs[k][j])
+					            / p.nbSimuls);
+			}
+			file << " " << xfin << "\n";
 		}
 
 		file.close();

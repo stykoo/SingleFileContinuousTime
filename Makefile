@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS=-W -Wall -ansi -pedantic -std=c++11 -O2 -g
+CFLAGS=-W -Wall -ansi -pedantic -std=c++11 -O3
 LDFLAGS=-lboost_program_options -lpthread
 EXEC=singleFileContinuousTime
 

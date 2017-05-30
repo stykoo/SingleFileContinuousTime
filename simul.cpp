@@ -99,7 +99,6 @@ void runOneSimulation(const Parameters &p, std::vector<Observables> &obs,
 	}
 
 	// Loop over time
-//	while (t < p.duration) {
 	while (tDiscrete < p.nbSteps) {
 		// Evolve
 		updateState(state, p, rndGen);
@@ -113,6 +112,11 @@ void runOneSimulation(const Parameters &p, std::vector<Observables> &obs,
 		if (p.visu) {
 			visualize(state, p, t);
 		}
+	}
+
+	// Observables for occupations at final time.
+	if (p.computeOcc) {
+		computeOccObs(state, p, obs[p.nbSteps-1]);
 	}
 }
 
@@ -213,17 +217,18 @@ void initObservables(std::vector<Observables> &obs, const Parameters &p) {
 		for (long i = 0 ; i < p.nbTracers ; ++i) {
 			obs[t].moments[i].assign(p.nbTracers - i, 0);
 		}
+	}
 		
-		if (p.computeOcc) {
-			obs[t].occObs.resize(NB_OBS_OCCUPATIONS);
-			for (int i = 0 ; i < NB_OBS_OCCUPATIONS ; ++i) {
-				obs[t].occObs[i].assign(p.nbSites, 0);
-			}
+	// We allocate memory for occupations only for the final iteration
+	if (p.computeOcc) {
+		obs[p.nbSteps-1].occObs.resize(NB_OBS_OCCUPATIONS);
+		for (int i = 0 ; i < NB_OBS_OCCUPATIONS ; ++i) {
+			obs[p.nbSteps-1].occObs[i].assign(p.nbSites, 0);
 		}
 	}
 }
 
-// Compute the observables.
+// Compute the observables (except those for the occupations).
 void computeObservables(const State &state, const Parameters &p,
 		                Observables &o) {
 	std::vector<long> xsPer(p.nbTracers);
@@ -238,19 +243,24 @@ void computeObservables(const State &state, const Parameters &p,
 			}
 		}
 	}
+}
 
-	if (p.computeOcc) {
-		for (long i = 0 ; i < p.nbSites ; ++i) {
-			long k = periodicBC(state.positions[0] + i, p.nbSites);
-			long l = periodicAdd1(state.positions[0], p.nbSites);
-			long eta = (long) (state.occupations[k] >= 0);
-			long eta1 = (long) (state.occupations[l] >= 0);
+// Compute the observables related to the occupations.
+// We assume the memory is already allocated.
+void computeOccObs(const State &state, const Parameters &p,
+		           Observables &o) {
+	long xPer = periodicBCsym(state.positions[0] - p.initPos[0], p.nbSites);
 
-			o.occObs[0][i] = eta;
-			o.occObs[1][i] = eta * eta1;
-			o.occObs[2][i] = xsPer[0] * eta;
-			o.occObs[3][i] = xsPer[0] * eta * eta1;
-		}
+	for (long i = 0 ; i < p.nbSites ; ++i) {
+		long k = periodicBC(state.positions[0] + i, p.nbSites);
+		long l = periodicAdd1(state.positions[0], p.nbSites);
+		long eta = (long) (state.occupations[k] >= 0);
+		long eta1 = (long) (state.occupations[l] >= 0);
+
+		o.occObs[0][i] = eta;
+		o.occObs[1][i] = eta * eta1;
+		o.occObs[2][i] = xPer * eta;
+		o.occObs[3][i] = xPer * eta * eta1;
 	}
 }
 
@@ -264,12 +274,13 @@ void addObservables(std::vector<Observables> &obs1,
 				obs1[t].moments[i][j] += obs2[t].moments[i][j];
 			}
 		}
+	}
 
-		if (p.computeOcc) {
-			for (long i = 0 ; i < p.nbSites ; ++i) {
-				for (int j = 0 ; j < NB_OBS_OCCUPATIONS ; ++j) {
-					obs1[t].occObs[j][i] += obs2[t].occObs[j][i];
-				}
+	if (p.computeOcc) {
+		for (long i = 0 ; i < p.nbSites ; ++i) {
+			for (int j = 0 ; j < NB_OBS_OCCUPATIONS ; ++j) {
+				obs1[p.nbSteps-1].occObs[j][i] +=
+					obs2[p.nbSteps-1].occObs[j][i];
 			}
 		}
 	}
@@ -313,7 +324,7 @@ int exportObservables(const std::vector<Observables> &sumObs,
 
 	file.close();
 
-	// Export occupations if needed
+	// Export occupations (at final time) if needed
 	if (p.computeOcc) {
 		size_t pos = p.output.find_last_of(".");
 		std::string rawname = p.output.substr(0, pos); 
@@ -329,7 +340,7 @@ int exportObservables(const std::vector<Observables> &sumObs,
 		file << "# SingleFileContinuousTime (" << __DATE__ <<  ", " << __TIME__
 		   	<< "): ";
 		printParameters(p, file);
-		file << ", t=" + std::to_string(p.duration) << "\n";
+		file << ", t=" + std::to_string(p.nbSteps*p.dt) << "\n";
 		file << "# i eta_i eta_i*eta_1 X*eta_i X*eta_i*eta_1 X\n";
 
 		double xfin = ((double) sumObs[p.nbSteps-1].moments[0][0])

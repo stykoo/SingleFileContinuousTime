@@ -39,6 +39,8 @@ void updateState(State &state, const Parameters &p, std::mt19937 &rndGen);
 void initObservables(std::vector<Observables> &obs, const Parameters &p);
 void computeObservables(const State &state, const Parameters &p,
 		                Observables &o);
+void computeOccObs(const State &state, const Parameters &p,
+		                Observables &o);
 void addObservables(std::vector<Observables> &obs1,
 		            const std::vector<Observables> &obs2, const Parameters &p);
 int exportObservables(const std::vector<Observables> &sumObs,

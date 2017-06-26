@@ -33,6 +33,8 @@ int parseArguments(int argc, char **argv, Parameters &p) {
 			DEFAULT_OUTPUT_FILE), "Output file")
         ("alt,A", po::bool_switch(&p.alt),
 		 "Use alternative algorithm for high density")
+        ("single,S", po::bool_switch(&p.computeObs1TP),
+		 "Compute and export occupations for a single particle")
         ("occ,O", po::bool_switch(&p.computeOcc),
 		 "Compute and export occupations at final time")
         ("visu,V", po::bool_switch(&p.visu), "Visualisation")

@@ -19,6 +19,7 @@ struct State {
 
 struct Observables {
 	std::vector< std::vector<long long> > moments;  // All the moments
+	std::vector<long long> moments1TP;  // Moments of TP 1
 
 	// Observables related to the occupations
 	// 0 -> occupations (eta_l)

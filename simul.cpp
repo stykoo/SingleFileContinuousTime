@@ -218,6 +218,13 @@ void initObservables(std::vector<Observables> &obs, const Parameters &p) {
 			obs[t].moments[i].assign(p.nbTracers - i, 0);
 		}
 	}
+
+	// If we store the observables for a single TP
+	if (p.computeObs1TP) {
+		for (long t = 0 ; t < p.nbSteps ; ++t) {
+			obs[t].moments1TP.assign(p.nbMoments, 0);
+		}
+	}
 		
 	// We allocate memory for occupations only for the final iteration
 	if (p.computeOcc) {
@@ -241,6 +248,12 @@ void computeObservables(const State &state, const Parameters &p,
 			for (long k = j ; k < j + i + 1 ; ++k) {
 				o.moments[i][j] *= xsPer[k];
 			}
+		}
+	}
+
+	if (p.computeObs1TP) {
+		for (long i = 0 ; i < p.nbMoments ; ++i) {
+			o.moments1TP[i] = mypow(xsPer[0], i + 1); 
 		}
 	}
 }
@@ -272,6 +285,14 @@ void addObservables(std::vector<Observables> &obs1,
 		for (long i = 0 ; i < p.nbTracers ; ++i) {
 			for (long j = 0 ; j < p.nbTracers - i ; ++j) {
 				obs1[t].moments[i][j] += obs2[t].moments[i][j];
+			}
+		}
+	}
+
+	if (p.computeObs1TP) {
+		for (long t = 0 ; t < p.nbSteps ; ++t) {
+			for (long i = 0 ; i < p.nbMoments ; ++i) {
+				obs1[t].moments1TP[i] += obs2[t].moments1TP[i];
 			}
 		}
 	}
@@ -323,6 +344,41 @@ int exportObservables(const std::vector<Observables> &sumObs,
 	}
 
 	file.close();
+
+	if (p.computeObs1TP) {
+		size_t pos = p.output.find_last_of(".");
+		std::string rawname = p.output.substr(0, pos); 
+		std::string ext = p.output.substr(pos); 
+		std::string name = rawname + "_1TP" + ext;
+
+		file.open(name);
+		if (!file.is_open()) {
+			return 1;
+		}
+
+		// Header
+		file << "# SingleFileContinuousTime (" << __DATE__ <<  ", " << __TIME__
+			<< "): ";
+		printParameters(p, file);
+		file << "\n# t";
+		for (long i = 0 ; i < p.nbMoments ; ++i) {
+			file << " x1^" << i + 1;
+		}
+		file << "\n";
+
+		file << std::scientific << std::setprecision(DEFAULT_OUTPUT_PRECISION);
+
+		// Data (we write the average and not the sum)
+		for (long k = 0 ; k < p.nbSteps ; ++k) {
+			file << k * p.dt;
+			for (long i = 0 ; i < p.nbMoments ; ++i) {
+				file << " " << ((double) sumObs[k].moments1TP[i]) / p.nbSimuls;
+			}
+			file << "\n";
+		}
+
+		file.close();
+	}
 
 	// Export occupations (at final time) if needed
 	if (p.computeOcc) {

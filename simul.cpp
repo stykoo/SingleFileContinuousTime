@@ -104,7 +104,7 @@ void runOneSimulation(const Parameters &p, std::vector<Observables> &obs,
 		updateState(state, p, rndGen);
 		t += rndTime(rndGen);
 
-		while (t - tLast > p.dt) {
+		while (t - tLast > p.dt && tDiscrete < p.nbSteps) {
 			computeObservables(state, p, obs[tDiscrete]);
 			++tDiscrete;
 			tLast += p.dt;

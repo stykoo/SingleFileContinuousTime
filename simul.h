@@ -21,6 +21,9 @@ struct Observables {
 	std::vector< std::vector<long long> > moments;  // All the moments
 	std::vector<long long> moments1TP;  // Moments of TP 1
 
+	long long occPos;  // Occupation of site 1
+	long long occNeg;  // Occupation of site -1
+
 	// Observables related to the occupations
 	// 0 -> occupations (eta_l)
 	// 1 -> occupation * occupation of site X+1 (eta_l * eta_1)

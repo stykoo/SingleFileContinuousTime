@@ -225,7 +225,7 @@ void initObservables(std::vector<Observables> &obs, const Parameters &p) {
 			obs[t].moments1TP.assign(p.nbMoments, 0);
 		}
 	}
-		
+
 	// We allocate memory for occupations only for the final iteration
 	if (p.computeOcc) {
 		obs[p.nbSteps-1].occObs.resize(NB_OBS_OCCUPATIONS);
@@ -250,6 +250,11 @@ void computeObservables(const State &state, const Parameters &p,
 			}
 		}
 	}
+
+	o.occPos = (long) (state.occupations[periodicAdd1(state.positions[0],
+			                                          p.nbSites)] >= 0);
+	o.occNeg = (long) (state.occupations[periodicSubs1(state.positions[0],
+			                                           p.nbSites)] >= 0);
 
 	if (p.computeObs1TP) {
 		for (long i = 0 ; i < p.nbMoments ; ++i) {
@@ -295,6 +300,11 @@ void addObservables(std::vector<Observables> &obs1,
 				obs1[t].moments1TP[i] += obs2[t].moments1TP[i];
 			}
 		}
+	}
+
+	for (long t = 0 ; t < p.nbSteps ; ++t) {
+		obs1[t].occPos += obs2[t].occPos;
+		obs1[t].occNeg += obs2[t].occNeg;
 	}
 
 	if (p.computeOcc) {
@@ -375,6 +385,36 @@ int exportObservables(const std::vector<Observables> &sumObs,
 				file << " " << ((double) sumObs[k].moments1TP[i]) / p.nbSimuls;
 			}
 			file << "\n";
+		}
+
+		file.close();
+	}
+
+	if (p.computeOccPosNeg) {
+		size_t pos = p.output.find_last_of(".");
+		std::string rawname = p.output.substr(0, pos); 
+		std::string ext = p.output.substr(pos); 
+		std::string name = rawname + "_occPosNeg" + ext;
+
+		file.open(name);
+		if (!file.is_open()) {
+			return 1;
+		}
+
+		// Header
+		file << "# SingleFileContinuousTime (" << __DATE__ <<  ", " << __TIME__
+			<< "): ";
+		printParameters(p, file);
+		file << "\n# t k(1) k(-1) X\n";
+
+		file << std::scientific << std::setprecision(DEFAULT_OUTPUT_PRECISION);
+
+		// Data (we write the average and not the sum)
+		for (long k = 0 ; k < p.nbSteps ; ++k) {
+			file << k * p.dt << " "
+				<< ((double) sumObs[k].occPos) / p.nbSimuls << " "
+				<< ((double) sumObs[k].occNeg) / p.nbSimuls << " "
+				<< ((double) sumObs[k].moments[0][0]) / p.nbSimuls << "\n";
 		}
 
 		file.close();

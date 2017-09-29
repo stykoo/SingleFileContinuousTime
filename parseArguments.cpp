@@ -39,6 +39,8 @@ int parseArguments(int argc, char **argv, Parameters &p) {
 		 "Compute and export occupations at final time")
         ("opn", po::bool_switch(&p.computeOccPosNeg),
 		 "Compute and export occupations for sites +1 and -1")
+        ("var", po::bool_switch(&p.computeVars),
+		 "Compute and export variances of the displacements")
         ("visu,V", po::bool_switch(&p.visu), "Visualisation")
         ("sleep", po::value<int>(&p.sleep)->default_value(DEFAULT_VISU_SLEEP),
 		 "Number of ms between visualizations")

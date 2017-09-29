@@ -233,6 +233,13 @@ void initObservables(std::vector<Observables> &obs, const Parameters &p) {
 			obs[p.nbSteps-1].occObs[i].assign(p.nbSites, 0);
 		}
 	}
+
+	//
+	if (p.computeVars) {
+		for (long t = 0 ; t < p.nbSteps ; ++t) {
+			obs[t].mom2.assign(p.nbTracers, 0);
+		}
+	}
 }
 
 // Compute the observables (except those for the occupations).
@@ -248,6 +255,9 @@ void computeObservables(const State &state, const Parameters &p,
 			for (long k = j ; k < j + i + 1 ; ++k) {
 				o.moments[i][j] *= xsPer[k];
 			}
+		}
+		if (p.computeVars) {
+			o.mom2[i] = xsPer[i] * xsPer[i];
 		}
 	}
 
@@ -291,6 +301,9 @@ void addObservables(std::vector<Observables> &obs1,
 			for (long j = 0 ; j < p.nbTracers - i ; ++j) {
 				obs1[t].moments[i][j] += obs2[t].moments[i][j];
 			}
+			if (p.computeVars) {
+				obs1[t].mom2[i] += obs2[t].mom2[i];
+			}
 		}
 	}
 
@@ -315,6 +328,7 @@ void addObservables(std::vector<Observables> &obs1,
 			}
 		}
 	}
+
 }
 
 // Export the observables to a file.
@@ -338,6 +352,11 @@ int exportObservables(const std::vector<Observables> &sumObs,
 			}
 		}
 	}
+	if (p.computeVars) {
+		for (long i = 0 ; i < p.nbTracers ; ++i) {
+			file << " x" << i+1 << "x" << i+1;
+		}
+	}
 	file << "\n";
 
 	file << std::scientific << std::setprecision(DEFAULT_OUTPUT_PRECISION);
@@ -348,6 +367,11 @@ int exportObservables(const std::vector<Observables> &sumObs,
 		for (long i = 0 ; i < p.nbTracers ; ++i) {
 			for (long j = 0 ; j < p.nbTracers - i ; ++j) {
 				file << " " << ((double) sumObs[k].moments[i][j]) / p.nbSimuls;
+			}
+		}
+		if (p.computeVars) {
+			for (long i = 0 ; i < p.nbTracers ; ++i) {
+				file << " " << ((double) sumObs[k].mom2[i]) / p.nbSimuls;
 			}
 		}
 		file << "\n";

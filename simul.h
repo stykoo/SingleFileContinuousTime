@@ -20,6 +20,7 @@ struct State {
 struct Observables {
 	std::vector< std::vector<long long> > moments;  // All the moments
 	std::vector<long long> moments1TP;  // Moments of TP 1
+	std::vector<long long> mom2;  // Second moment of each displacement
 
 	long long occPos;  // Occupation of site 1
 	long long occNeg;  // Occupation of site -1

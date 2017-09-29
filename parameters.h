@@ -33,6 +33,7 @@ struct Parameters {
 	bool computeObs1TP;  // Compute observables for a single TP
 	bool computeOcc;  // Compute occupations
 	bool computeOccPosNeg;  // Compute occupations for sites +1 and -1
+	bool computeVars;  // Compute variance of TPs
 	bool visu;  // Visualization
 	int sleep;  // Number of milliseconds between two visualizations
 	bool verbose;  // Verbose mode

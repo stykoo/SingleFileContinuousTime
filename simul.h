@@ -6,6 +6,10 @@
 #include "parameters.h"
 
 #define NB_OBS_OCCUPATIONS 4
+#define U_MIN -1.0
+#define U_MAX 1.0
+#define N_POINTS_U 101
+
 
 struct State {
 	std::vector<long> positions;  // Positions of the particles
@@ -31,6 +35,8 @@ struct Observables {
 	// 2 -> X * eta_l
 	// 3 -> X * eta_l * eta_1 
 	std::vector< std::vector<long> > occObs;
+
+	std::vector<double> genX, ws1;
 };
 
 int runSimulations(const Parameters &p);

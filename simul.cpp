@@ -240,6 +240,13 @@ void initObservables(std::vector<Observables> &obs, const Parameters &p) {
 			obs[t].mom2.assign(p.nbTracers, 0);
 		}
 	}
+
+	if (p.computeW) {
+		for (long t = 0 ; t < p.nbSteps ; ++t) {
+			obs[t].genX.assign(N_POINTS_U, 0);
+			obs[t].ws1.assign(N_POINTS_U, 0);
+		}
+	}
 }
 
 // Compute the observables (except those for the occupations).
@@ -269,6 +276,15 @@ void computeObservables(const State &state, const Parameters &p,
 	if (p.computeObs1TP) {
 		for (long i = 0 ; i < p.nbMoments ; ++i) {
 			o.moments1TP[i] = mypow(xsPer[0], i + 1); 
+		}
+	}
+
+	if (p.computeW) {
+		for (long i = 0 ; i < N_POINTS_U ; ++i) {
+			double u = U_MIN + i * (U_MAX - U_MIN) / (N_POINTS_U - 1);
+			o.genX[i] = std::exp(u * xsPer[0]);
+			long l = periodicAdd1(state.positions[0], p.nbSites);
+			o.ws1[i] = (state.occupations[l] >= 0) * o.genX[i];
 		}
 	}
 }
@@ -311,6 +327,15 @@ void addObservables(std::vector<Observables> &obs1,
 		for (long t = 0 ; t < p.nbSteps ; ++t) {
 			for (long i = 0 ; i < p.nbMoments ; ++i) {
 				obs1[t].moments1TP[i] += obs2[t].moments1TP[i];
+			}
+		}
+	}
+
+	if (p.computeW) {
+		for (long t = 0 ; t < p.nbSteps ; ++t) {
+			for (long i = 0 ; i < N_POINTS_U ; ++i) {
+				obs1[t].genX[i] += obs2[t].genX[i];
+				obs1[t].ws1[i] += obs2[t].ws1[i];
 			}
 		}
 	}
@@ -475,6 +500,66 @@ int exportObservables(const std::vector<Observables> &sumObs,
 			file << " " << xfin << "\n";
 		}
 
+		file.close();
+	}
+
+	if (p.computeW) {
+		size_t pos = p.output.find_last_of(".");
+		std::string rawname = p.output.substr(0, pos); 
+		std::string ext = p.output.substr(pos); 
+
+		std::string name = rawname + "_genX" + ext;
+		file.open(name);
+		if (!file.is_open()) {
+			return 1;
+		}
+		// Header
+		file << "# SingleFileContinuousTime (" << __DATE__ <<  ", " << __TIME__
+			<< "): ";
+		printParameters(p, file);
+		file << "\n# t u1 u2 ...\n";
+		file << std::scientific << std::setprecision(DEFAULT_OUTPUT_PRECISION);
+		file << "NaN";
+		for (long i = 0 ; i < N_POINTS_U ; ++i) {
+			double u = U_MIN + i * (U_MAX - U_MIN) / (N_POINTS_U - 1);
+			file << " " << u;
+		}
+		file << "\n";
+		// Data (we write the average and not the sum)
+		for (long k = 0 ; k < p.nbSteps ; ++k) {
+			file << k * p.dt;
+			for (long i = 0 ; i < N_POINTS_U ; ++i) {
+				file << " " << ((double) sumObs[k].genX[i]) / p.nbSimuls;
+			}
+			file << "\n";
+		}
+		file.close();
+
+		name = rawname + "_ws1" + ext;
+		file.open(name);
+		if (!file.is_open()) {
+			return 1;
+		}
+		// Header
+		file << "# SingleFileContinuousTime (" << __DATE__ <<  ", " << __TIME__
+			<< "): ";
+		printParameters(p, file);
+		file << "\n# t u1 u2 ...\n";
+		file << std::scientific << std::setprecision(DEFAULT_OUTPUT_PRECISION);
+		file << "NaN ";
+		for (long i = 0 ; i < N_POINTS_U ; ++i) {
+			double u = U_MIN + i * (U_MAX - U_MIN) / (N_POINTS_U - 1);
+			file << " " << u;
+		}
+		file << "\n";
+		// Data (we write the average and not the sum)
+		for (long k = 0 ; k < p.nbSteps ; ++k) {
+			file << k * p.dt;
+			for (long i = 0 ; i < N_POINTS_U ; ++i) {
+				file << " " << ((double) sumObs[k].ws1[i]) / p.nbSimuls;
+			}
+			file << "\n";
+		}
 		file.close();
 	}
 	return 0;
